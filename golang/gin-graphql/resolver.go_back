@@ -1,0 +1,48 @@
+package gin_graphql
+
+// THIS CODE IS A STARTING POINT ONLY. IT WILL NOT BE UPDATED WITH SCHEMA CHANGES.
+
+import (
+	"context"
+)
+
+type Resolver struct{}
+
+var orders []*Order
+
+func (r *mutationResolver) CreateOrder(ctx context.Context, input OrderInput) (*Order, error) {
+	order := Order{
+		// ID:           ,
+		CustomerName: input.CustomerName,
+		OrderAmount:  input.OrderAmount,
+		// Items:        nil,
+	}
+	orders = append(orders, &order)
+	return &order, nil
+}
+
+func (r *mutationResolver) UpdateOrder(ctx context.Context, orderID int, input OrderInput) (*Order, error) {
+	return &Order{
+		ID:           0,
+		CustomerName: "",
+		OrderAmount:  0.0,
+		Items:        nil,
+	}, nil
+}
+
+func (r *mutationResolver) DeleteOrder(ctx context.Context, orderID int) (bool, error) {
+	return true, nil
+}
+
+func (r *queryResolver) Orders(ctx context.Context) ([]*Order, error) {
+	return orders, nil
+}
+
+// Mutation returns MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+
+// Query returns QueryResolver implementation.
+func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+
+type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }
