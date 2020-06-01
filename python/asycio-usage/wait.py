@@ -11,9 +11,10 @@ async def foo(n):
 
 async def main():
     tasks = [foo(1), foo(2), foo(3)]
-    result = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
     # result = await asyncio.wait(tasks)
-    print(result)
+    print(done)
+    print(pending)
 
 
 if __name__ == '__main__':
