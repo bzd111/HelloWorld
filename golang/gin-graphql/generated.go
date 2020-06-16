@@ -49,11 +49,12 @@ type ComplexityRoot struct {
 		CreateUser func(childComplexity int, input NewUser) int
 		DeleteTodo func(childComplexity int, input int) int
 		UpdateTodo func(childComplexity int, input EditTodo) int
+		UserLogin  func(childComplexity int, name string, password string) int
 	}
 
 	Query struct {
 		Todo  func(childComplexity int, input *FetchTodo) int
-		Todos func(childComplexity int) int
+		Todos func(childComplexity int, page *Pagination) int
 		Users func(childComplexity int) int
 	}
 
@@ -71,6 +72,7 @@ type ComplexityRoot struct {
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Name      func(childComplexity int) int
+		Password  func(childComplexity int) int
 		UpdatedAt func(childComplexity int) int
 	}
 }
@@ -80,9 +82,10 @@ type MutationResolver interface {
 	UpdateTodo(ctx context.Context, input EditTodo) (*models.Todo, error)
 	DeleteTodo(ctx context.Context, input int) (*models.Todo, error)
 	CreateUser(ctx context.Context, input NewUser) (*models.User, error)
+	UserLogin(ctx context.Context, name string, password string) (*models.User, error)
 }
 type QueryResolver interface {
-	Todos(ctx context.Context) ([]*models.Todo, error)
+	Todos(ctx context.Context, page *Pagination) ([]*models.Todo, error)
 	Users(ctx context.Context) ([]*models.User, error)
 	Todo(ctx context.Context, input *FetchTodo) (*models.Todo, error)
 }
@@ -150,6 +153,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateTodo(childComplexity, args["input"].(EditTodo)), true
 
+	case "Mutation.userLogin":
+		if e.complexity.Mutation.UserLogin == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_userLogin_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UserLogin(childComplexity, args["name"].(string), args["password"].(string)), true
+
 	case "Query.todo":
 		if e.complexity.Query.Todo == nil {
 			break
@@ -167,7 +182,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Todos(childComplexity), true
+		args, err := ec.field_Query_todos_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Todos(childComplexity, args["page"].(*Pagination)), true
 
 	case "Query.users":
 		if e.complexity.Query.Users == nil {
@@ -245,6 +265,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.Name(childComplexity), true
+
+	case "User.password":
+		if e.complexity.User.Password == nil {
+			break
+		}
+
+		return e.complexity.User.Password(childComplexity), true
 
 	case "User.updatedAt":
 		if e.complexity.User.UpdatedAt == nil {
@@ -330,14 +357,20 @@ var sources = []*ast.Source{
 type User {
   id: Int!
   name: String!
+  password: String!
   createdAt: Time!
   updatedAt: Time!
 }
 
 type Query {
-  todos: [Todo!]!
+  todos(page: Pagination = {page: 0, size: 20}): [Todo!]!
   users: [User!]!
   todo(input: FetchTodo): Todo!
+}
+
+input Pagination {
+    page: Int!
+    size: Int!
 }
 
 input NewTodo {
@@ -352,6 +385,7 @@ input EditTodo {
 
 input NewUser {
   name: String!
+  password: String!
 }
 
 input FetchTodo {
@@ -363,6 +397,7 @@ type Mutation {
   updateTodo(input: EditTodo!): Todo!
   deleteTodo(input: Int!): Todo!
   createUser(input: NewUser!): User!
+  userLogin(name: String!, password: String!): User!
 }
 
 scalar Time
@@ -430,6 +465,28 @@ func (ec *executionContext) field_Mutation_updateTodo_args(ctx context.Context, 
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_userLogin_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["name"]; ok {
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["password"]; ok {
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["password"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -455,6 +512,20 @@ func (ec *executionContext) field_Query_todo_args(ctx context.Context, rawArgs m
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_todos_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *Pagination
+	if tmp, ok := rawArgs["page"]; ok {
+		arg0, err = ec.unmarshalOPagination2ᚖgin_graphqlᚐPagination(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["page"] = arg0
 	return args, nil
 }
 
@@ -658,6 +729,47 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 	return ec.marshalNUser2ᚖgin_graphqlᚋmodelsᚐUser(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_userLogin(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_userLogin_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UserLogin(rctx, args["name"].(string), args["password"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgin_graphqlᚋmodelsᚐUser(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -673,9 +785,16 @@ func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.Coll
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_todos_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Todos(rctx)
+		return ec.resolvers.Query().Todos(rctx, args["page"].(*Pagination))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1126,6 +1245,40 @@ func (ec *executionContext) _User_name(ctx context.Context, field graphql.Collec
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_password(ctx context.Context, field graphql.CollectedField, obj *models.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Password, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2343,6 +2496,36 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 			if err != nil {
 				return it, err
 			}
+		case "password":
+			var err error
+			it.Password, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputPagination(ctx context.Context, obj interface{}) (Pagination, error) {
+	var it Pagination
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "page":
+			var err error
+			it.Page, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "size":
+			var err error
+			it.Size, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		}
 	}
 
@@ -2389,6 +2572,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "createUser":
 			out.Values[i] = ec._Mutation_createUser(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "userLogin":
+			out.Values[i] = ec._Mutation_userLogin(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -2550,6 +2738,11 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "name":
 			out.Values[i] = ec._User_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "password":
+			out.Values[i] = ec._User_password(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -3247,6 +3440,18 @@ func (ec *executionContext) unmarshalOFetchTodo2ᚖgin_graphqlᚐFetchTodo(ctx c
 		return nil, nil
 	}
 	res, err := ec.unmarshalOFetchTodo2gin_graphqlᚐFetchTodo(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) unmarshalOPagination2gin_graphqlᚐPagination(ctx context.Context, v interface{}) (Pagination, error) {
+	return ec.unmarshalInputPagination(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOPagination2ᚖgin_graphqlᚐPagination(ctx context.Context, v interface{}) (*Pagination, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOPagination2gin_graphqlᚐPagination(ctx, v)
 	return &res, err
 }
 

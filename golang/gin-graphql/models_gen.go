@@ -17,5 +17,11 @@ type NewTodo struct {
 }
 
 type NewUser struct {
-	Name string `json:"name"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+type Pagination struct {
+	Page int `json:"page"`
+	Size int `json:"size"`
 }

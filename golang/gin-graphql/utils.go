@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // var GinCtxKey struct{}
@@ -18,6 +19,16 @@ func FromStd(handler http.HandlerFunc) gin.HandlerFunc {
 		handler(ctx.Writer, request)
 	}
 }
+
 func GetGinCtxFromStdCtx(ctx context.Context) *gin.Context {
 	return ctx.Value(GinCtxKey).(*gin.Context)
+}
+
+func GeneratePasswordHash(password []byte) ([]byte, error) {
+	return bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+}
+
+// ValidatePasswordHash validate password is match with hashedPassword
+func ValidatePasswordHash(hashedPassword, password []byte) bool {
+	return bcrypt.CompareHashAndPassword(hashedPassword, password) == nil
 }

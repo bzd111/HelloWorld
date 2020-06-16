@@ -11,14 +11,20 @@ type Todo {
 type User {
   id: Int!
   name: String!
+  password: String!
   createdAt: Time!
   updatedAt: Time!
 }
 
 type Query {
-  todos: [Todo!]!
+  todos(page: Pagination = {page: 0, size: 20}): [Todo!]!
   users: [User!]!
   todo(input: FetchTodo): Todo!
+}
+
+input Pagination {
+    page: Int!
+    size: Int!
 }
 
 input NewTodo {
@@ -33,6 +39,7 @@ input EditTodo {
 
 input NewUser {
   name: String!
+  password: String!
 }
 
 input FetchTodo {
@@ -44,6 +51,7 @@ type Mutation {
   updateTodo(input: EditTodo!): Todo!
   deleteTodo(input: Int!): Todo!
   createUser(input: NewUser!): User!
+  userLogin(name: String!, password: String!): User!
 }
 
 scalar Time
